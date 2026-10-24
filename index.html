@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delta Tech - Analítica de Calidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        :root {
+            --bg-base: #12141a;
+            --bg-panel: #1a1c23;
+            --bg-header: #15171e;
+            --text-main: #e2e8f0;
+            --border-color: #2d313a;
+            
+            /* Colores Institucionales de Líneas */
+            --color-upr: #3b82f6;    /* Azul */
+            --color-cowl: #6366f1;   /* Índigo */
+            --color-pocket: #14b8a6; /* Teal */
+            --color-cover: #10b981;  /* Esmeralda */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .font-condensed { font-family: 'Roboto Condensed', sans-serif; }
+        
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-panel {
+            background-color: var(--bg-header);
+            border-bottom: 2px solid var(--color-upr);
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #15171e;
+            border-radius: 6px 6px 0 0;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: #3f4452; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        @keyframes pulse-green {
+            0% { opacity: 1; box-shadow: 0 0 8px var(--color-cover); }
+            50% { opacity: 0.4; box-shadow: 0 0 2px var(--color-cover); }
+            100% { opacity: 1; box-shadow: 0 0 8px var(--color-cover); }
+        }
+        .live-dot {
+            width: 8px; height: 8px;
+            background-color: var(--color-cover);
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-green 1.5s infinite;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th {
+            background-color: #15171e;
+            color: #64748b;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky; top: 0; z-index: 10;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            white-space: nowrap;
+        }
+        tr:hover td { background-color: rgba(255,255,255,0.03); }
+        
+        .stat-value { font-family: 'Roboto Condensed', sans-serif; font-weight: 700; }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1); cursor: pointer; opacity: 0.7;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+        
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem top 50%;
+            background-size: 0.65rem auto;
+            padding-right: 1.5rem;
+        }
+    </style>
+</head>
+<body class="lg:h-screen lg:overflow-hidden">
+
+    <!-- HEADER SÚPER ROBUSTO -->
+    <header class="header-panel flex flex-col xl:flex-row justify-between items-start xl:items-center px-4 py-3 gap-4 flex-shrink-0 z-20 shadow-md">
+        
+        <!-- LOGO Y TÍTULO -->
+        <div class="flex items-center gap-3 w-full xl:w-auto">
+            <div class="w-10 h-10 bg-blue-600 flex items-center justify-center text-white text-xl rounded-sm shadow-[0_0_10px_rgba(59,130,246,0.5)] flex-shrink-0">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-widest text-white m-0 leading-none">DELTA TECH</h1>
+                <p class="text-[9px] text-blue-400 font-bold tracking-widest m-0 uppercase mt-0.5">Control Analítico V2</p>
+            </div>
+        </div>
+
+        <!-- FILTROS PRINCIPALES -->
+        <div class="flex flex-wrap xl:flex-nowrap items-center w-full xl:w-auto gap-3">
+            
+            <!-- Selector de Línea -->
+            <div class="flex items-center gap-2 bg-[#1a1c23] px-3 py-1.5 rounded border border-gray-700 shadow-inner flex-1 xl:flex-none">
+                <i class="fas fa-filter text-gray-500 text-[10px]"></i>
+                <select id="filter-line" onchange="processDataAndRender()" class="bg-transparent text-white font-bold text-xs outline-none cursor-pointer uppercase tracking-wider w-full xl:w-auto">
+                    <option value="ALL">Todas las Líneas</option>
+                    <option value="UPR">Solo UPR</option>
+                    <option value="COWL">Solo COWL</option>
+                    <option value="POCKET">Solo POCKET</option>
+                    <option value="COVER">Solo COVER</option>
+                </select>
+            </div>
+
+            <!-- Selector de Rango de Fechas Dinámico -->
+            <div class="flex flex-wrap sm:flex-nowrap items-center bg-[#1a1c23] p-1 rounded border border-gray-700 shadow-inner w-full xl:w-auto gap-1">
+                <div class="flex gap-1 border-r border-gray-700 pr-2">
+                    <button onclick="setDateRange('today')" class="bg-[#2d313a] hover:bg-[#3b82f6] text-gray-300 hover:text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase transition">Hoy</button>
+                    <button onclick="setDateRange('7days')" class="bg-[#2d313a] hover:bg-[#3b82f6] text-gray-300 hover:text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase transition">7 Días</button>
+                    <button onclick="setDateRange('30days')" class="bg-[#2d313a] hover:bg-[#3b82f6] text-gray-300 hover:text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase transition">30 Días</button>
+                </div>
+                <div class="flex items-center gap-2 px-2 py-1 w-full sm:w-auto justify-between sm:justify-start">
+                    <div class="flex flex-col">
+                        <span class="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Desde</span>
+                        <input type="date" id="date-start" class="bg-transparent text-white font-bold text-xs outline-none cursor-pointer" onchange="processDataAndRender()">
+                    </div>
+                    <span class="text-gray-600 text-lg">-</span>
+                    <div class="flex flex-col">
+                        <span class="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Hasta</span>
+                        <input type="date" id="date-end" class="bg-transparent text-white font-bold text-xs outline-none cursor-pointer" onchange="processDataAndRender()">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ACCIONES Y ESTADO -->
+        <div class="flex items-center justify-between w-full xl:w-auto gap-4">
+            <div class="flex items-center gap-2">
+                <button onclick="toggleFullscreen()" id="btn-fullscreen" class="bg-[#2d313a] hover:bg-[#3f4452] text-white border border-[#444] px-3 py-2.5 rounded text-xs font-bold transition flex items-center gap-2 shadow-sm" title="Pantalla Completa">
+                    <i class="fas fa-expand text-gray-400"></i>
+                </button>
+                <button onclick="downloadCSV()" class="bg-[#10b981]/20 hover:bg-[#10b981]/40 text-[#10b981] border border-[#10b981]/50 px-4 py-2.5 rounded text-xs font-bold transition flex items-center gap-2 shadow-sm uppercase tracking-wider">
+                    <i class="fas fa-file-excel"></i> Exportar
+                </button>
+            </div>
+            
+            <div class="flex flex-col items-end min-w-[80px]">
+                <div class="flex items-center gap-2 mb-0.5">
+                    <div class="live-dot" id="live-dot-indicator"></div>
+                    <span class="text-gray-300 text-[9px] font-bold tracking-widest uppercase" id="sync-status">Conectando</span>
+                </div>
+                <span id="header-time" class="text-white font-condensed font-bold text-sm tracking-wider">--:--:--</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="flex-1 flex flex-col p-3 md:p-4 gap-4 overflow-y-auto lg:overflow-hidden bg-[#12141a]">
+        
+        <!-- FILA 1: KPIs SUPERIORES -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 flex-shrink-0">
+            
+            <!-- TOTAL GLOBAL -->
+            <div class="panel flex flex-col relative border-l-4 border-gray-500" id="kpi-panel-total">
+                <div class="section-title text-gray-400">
+                    <span>DEFECTOS (SELECCIÓN)</span>
+                    <i class="fas fa-globe text-gray-600"></i>
+                </div>
+                <div class="flex-1 flex items-center justify-between px-4 py-3">
+                    <span class="text-4xl md:text-5xl stat-value text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" id="kpi-total">0</span>
+                    <div class="text-right">
+                        <span class="block text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Registros Base</span>
+                        <span class="block text-lg md:text-xl font-bold text-gray-400" id="kpi-registros">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPR -->
+            <div class="panel flex flex-col border-t-4 lg:border-t-0 lg:border-l-4 border-[#3b82f6] min-h-[90px] transition-opacity duration-300" id="kpi-panel-upr">
+                <div class="section-title text-[#3b82f6]"><span>UPR LINE</span></div>
+                <div class="flex-1 flex items-center justify-between px-3 md:px-4 py-2">
+                    <span class="text-3xl md:text-4xl stat-value text-[#3b82f6]" id="kpi-upr">0</span>
+                    <div class="flex gap-2 md:gap-4 text-[9px] md:text-[10px] text-gray-400 font-bold uppercase text-right tracking-wider">
+                        <div><span class="block text-gray-500">PIEZAS</span><span class="text-xs md:text-sm text-gray-200" id="kpi-upr-pz">0</span></div>
+                        <div><span class="block text-gray-500">CARROS</span><span class="text-xs md:text-sm text-gray-200" id="kpi-upr-cx">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COWL -->
+            <div class="panel flex flex-col border-t-4 lg:border-t-0 lg:border-l-4 border-[#6366f1] min-h-[90px] transition-opacity duration-300" id="kpi-panel-cowl">
+                <div class="section-title text-[#6366f1]"><span>COWL LINE</span></div>
+                <div class="flex-1 flex items-center justify-between px-3 md:px-4 py-2">
+                    <span class="text-3xl md:text-4xl stat-value text-[#6366f1]" id="kpi-cowl">0</span>
+                    <div class="flex gap-2 md:gap-4 text-[9px] md:text-[10px] text-gray-400 font-bold uppercase text-right tracking-wider">
+                        <div><span class="block text-gray-500">CONTAM.</span><span class="text-xs md:text-sm text-gray-200" id="kpi-cowl-cont">0</span></div>
+                        <div><span class="block text-gray-500">OTROS</span><span class="text-xs md:text-sm text-gray-200" id="kpi-cowl-otr">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POCKET & COVER -->
+            <div class="panel flex flex-col border-t-4 lg:border-t-0 lg:border-l-4 border-gray-600 min-h-[90px] transition-opacity duration-300" id="kpi-panel-pc">
+                <div class="section-title">
+                    <span class="text-[#14b8a6]">POCKET</span> <span class="text-gray-600 mx-1">&</span> <span class="text-[#10b981]">COVER</span>
+                </div>
+                <div class="flex-1 flex items-center justify-between px-3 md:px-4 py-2">
+                    <div class="text-center transition-opacity" id="kpi-sub-pocket">
+                        <span class="block text-xl md:text-2xl stat-value text-[#14b8a6]" id="kpi-pocket">0</span>
+                        <span class="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase tracking-wider">Rechazos</span>
+                    </div>
+                    <div class="w-px h-8 bg-gray-700"></div>
+                    <div class="text-center transition-opacity" id="kpi-sub-cover">
+                        <span class="block text-xl md:text-2xl stat-value text-[#10b981]" id="kpi-cover">0</span>
+                        <span class="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase tracking-wider">Rechazos</span>
+                    </div>
+                    <div class="w-px h-8 bg-gray-700"></div>
+                    <div class="text-center transition-opacity" id="kpi-sub-tarimas">
+                        <span class="block text-xl md:text-2xl stat-value text-gray-300" id="kpi-tarimas">0</span>
+                        <span class="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase tracking-wider">Tarimas OK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILA 2: GRÁFICAS -->
+        <div class="flex flex-col lg:flex-row gap-3 md:gap-4 flex-shrink-0 lg:h-[300px]">
+            
+            <!-- TOP DEFECTOS (Más claro y diferenciado) -->
+            <div class="panel flex flex-col lg:w-1/3 min-h-[250px]">
+                <div class="section-title text-gray-300">
+                    <span>TOP DEFECTOS</span>
+                    <span class="text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded text-[8px] font-bold border border-blue-800/50">POR VOLUMEN</span>
+                </div>
+                <div class="flex-1 p-4 flex flex-col justify-start gap-3 overflow-y-auto" id="top-defects-container">
+                    <div class="text-center text-gray-600 font-bold text-xs mt-10 uppercase tracking-widest">Calculando datos...</div>
+                </div>
+            </div>
+
+            <!-- PARTICIPACIÓN POR LÍNEA -->
+            <div class="panel flex flex-col lg:w-1/4 min-h-[250px]">
+                <div class="section-title text-gray-300">
+                    <span>DISTRIBUCIÓN</span>
+                    <span id="lbl-donut-type" class="text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded text-[8px] font-bold border border-blue-800/50">POR LÍNEA</span>
+                </div>
+                <div class="flex-1 relative w-full min-h-[200px] p-2 flex flex-col items-center justify-center" id="chart-donut-container">
+                    <!-- ApexChart -->
+                </div>
+            </div>
+
+            <!-- TENDENCIA DINÁMICA APILADA -->
+            <div class="panel flex flex-col lg:w-5/12 min-h-[250px]">
+                <div class="section-title text-gray-300">
+                    <span>TENDENCIA DIARIA</span>
+                    <span class="text-gray-500 text-[9px] font-bold" id="lbl-trend-range">...</span>
+                </div>
+                <div class="flex-1 relative w-full h-full p-2" id="chart-trend-container">
+                    <!-- ApexChart -->
+                </div>
+            </div>
+        </div>
+
+        <!-- FILA 3: TABLA DE DATOS DETALLADA -->
+        <div class="panel flex-1 flex flex-col min-h-[350px] lg:min-h-0">
+            <div class="section-title text-gray-300 flex-shrink-0">
+                <span>BITÁCORA DE REGISTROS</span>
+                <span id="table-record-count" class="text-gray-400 bg-[#12141a] px-3 py-1 rounded text-[10px] border border-gray-700">0 EVENTOS</span>
+            </div>
+            <div class="flex-1 overflow-auto p-1 relative">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr>
+                            <th class="w-[12%]">FECHA / HORA</th>
+                            <th class="w-[10%]">LÍNEA</th>
+                            <th class="w-[12%]">FORMATO</th>
+                            <th class="w-[15%]">DETALLES (VAR/LADO)</th>
+                            <th class="w-[20%]">TIPO DE DAÑO</th>
+                            <th class="w-[10%] text-center">CANTIDAD</th>
+                            <th class="w-[15%]">INSPECTOR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Filas dinámicas -->
+                    </tbody>
+                </table>
+                <div id="table-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-[#1a1c23]/90 backdrop-blur-sm z-10">
+                    <i class="fas fa-folder-open text-4xl text-gray-600 mb-3"></i>
+                    <p class="font-bold tracking-widest uppercase text-xs text-gray-500">Cero registros en los filtros actuales.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 🚨 CONFIGURACIÓN DE FIREBASE
+        let firebaseConfig = {
+            apiKey: "AIzaSyC6-UX4jsL4nfyprVw1PviZzHwnKbWLipA",
+            authDomain: "delta-9c75f.firebaseapp.com",
+            projectId: "delta-9c75f",
+            storageBucket: "delta-9c75f.firebasestorage.app",
+            messagingSenderId: "901178031655",
+            appId: "1:901178031655:web:5d7f41aedede352ea71802",
+            measurementId: "G-0QY5CJP0ED"
+        };
+
+        let allRecords = [];
+        let chartDonut, chartTrend;
+        
+        // Manejo de Fechas Locales Preciso
+        const getLocalDateString = (offsetDays = 0) => {
+            const date = new Date();
+            date.setDate(date.getDate() + offsetDays);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        };
+
+        // Reloj Header
+        setInterval(() => {
+            document.getElementById('header-time').textContent = new Date().toLocaleTimeString('es-MX', {hour12: false});
+        }, 1000);
+
+        // Control del Rango de Fechas
+        window.setDateRange = function(type) {
+            document.getElementById('date-end').value = getLocalDateString(0); // Hasta siempre es hoy por defecto en estos botones
+            
+            if (type === 'today') {
+                document.getElementById('date-start').value = getLocalDateString(0);
+            } else if (type === '7days') {
+                document.getElementById('date-start').value = getLocalDateString(-6);
+            } else if (type === '30days') {
+                document.getElementById('date-start').value = getLocalDateString(-29);
+            }
+            
+            if(allRecords.length > 0) processDataAndRender();
+        };
+        
+        // Inicializar Fechas en HOY
+        document.getElementById('date-start').value = getLocalDateString(0);
+        document.getElementById('date-end').value = getLocalDateString(0);
+
+        // Regla de Negocio (Migración COWL)
+        const cleanRecords = (records) => {
+            return records.map(r => {
+                let corrected = { ...r };
+                if (corrected.pieceType === 'COWL' && corrected.damage === 'Sin etiqueta') {
+                    corrected.damage = 'Contaminación';
+                }
+                corrected.quantity = parseInt(corrected.quantity) || 1;
+                return corrected;
+            });
+        };
+
+        async function initDashboard() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                
+                await signInAnonymously(auth);
+                const rechazosRef = collection(db, 'rechazos_delta');
+
+                onSnapshot(rechazosRef, (snapshot) => {
+                    let rawRecords = [];
+                    snapshot.forEach(docSnap => rawRecords.push({ id: docSnap.id, ...docSnap.data() }));
+                    
+                    allRecords = cleanRecords(rawRecords);
+                    
+                    const st = document.getElementById('sync-status');
+                    st.textContent = 'DATA LIVE';
+                    st.style.color = '#10b981'; // emerald
+                    document.getElementById('live-dot-indicator').style.backgroundColor = '#10b981';
+                    
+                    processDataAndRender();
+                }, (error) => {
+                    console.error(error);
+                    const st = document.getElementById('sync-status');
+                    st.textContent = 'OFFLINE';
+                    st.style.color = '#ef4444'; // red
+                    document.getElementById('live-dot-indicator').style.backgroundColor = '#ef4444';
+                });
+
+            } catch (error) {
+                console.error("Error conectando a Firebase:", error);
+                document.getElementById('sync-status').textContent = 'ERROR DB';
+            }
+        }
+
+        function initCharts() {
+            const commonOptions = {
+                chart: { background: 'transparent', toolbar: { show: false }, animations: { enabled: false } }, // Animaciones off para max rendimiento en SCADA
+                theme: { mode: 'dark' },
+                grid: { borderColor: '#2d313a', strokeDashArray: 3, padding: { top: 0, right: 0, bottom: 0, left: 10 } },
+                tooltip: { theme: 'dark' },
+                colors: ['#3b82f6', '#6366f1', '#14b8a6', '#10b981'] // UPR, COWL, POCKET, COVER
+            };
+
+            // DONA
+            const optionsDonut = {
+                ...commonOptions,
+                series: [0, 0, 0, 0],
+                labels: ['UPR', 'COWL', 'POCKET', 'COVER'],
+                chart: { ...commonOptions.chart, type: 'donut', height: '100%', width: '100%' },
+                dataLabels: { enabled: false },
+                plotOptions: {
+                    pie: {
+                        donut: { 
+                            size: '75%', 
+                            labels: { 
+                                show: true, 
+                                name: { show: true, color: '#94a3b8', fontSize: '11px', fontWeight: 700 }, 
+                                value: { show: true, fontSize: '28px', fontWeight: 800, color: '#fff' }, 
+                                total: { show: true, label: 'TOTAL DEF.', color: '#64748b', fontSize: '9px', fontWeight: 700 } 
+                            } 
+                        }
+                    }
+                },
+                stroke: { show: true, colors: ['#1a1c23'], width: 3 }, // Color de fondo del panel
+                legend: { position: 'bottom', fontSize: '10px', fontWeight: 600, labels: { colors: '#cbd5e1' }, markers: { width: 8, height: 8, radius: 2 } }
+            };
+            chartDonut = new ApexCharts(document.querySelector("#chart-donut-container"), optionsDonut);
+            chartDonut.render();
+
+            // TENDENCIA APILADA POR DÍA Y LÍNEA
+            const optionsTrend = {
+                ...commonOptions,
+                series: [
+                    { name: 'UPR', data: [] },
+                    { name: 'COWL', data: [] },
+                    { name: 'POCKET', data: [] },
+                    { name: 'COVER', data: [] }
+                ],
+                chart: { ...commonOptions.chart, type: 'bar', stacked: true, height: '100%', width: '100%' },
+                stroke: { width: 1, colors: ['#1a1c23'] },
+                plotOptions: { bar: { columnWidth: '50%' } },
+                dataLabels: { enabled: false }, // Oculto para limpieza visual
+                xaxis: { 
+                    type: 'category', 
+                    categories: [], 
+                    labels: { style: { colors: '#64748b', fontSize: '9px', fontWeight: 700 } }, 
+                    axisBorder: { show: false }, 
+                    axisTicks: { show: false } 
+                },
+                yaxis: { 
+                    show: true, 
+                    labels: { style: { colors: '#64748b', fontSize: '10px', fontWeight: 700 } } 
+                },
+                legend: { position: 'top', horizontalAlign: 'right', fontSize: '10px', fontWeight: 600, labels: { colors: '#cbd5e1' }, markers: { width: 8, height: 8, radius: 2 } }
+            };
+            chartTrend = new ApexCharts(document.querySelector("#chart-trend-container"), optionsTrend);
+            chartTrend.render();
+        }
+
+        window.processDataAndRender = function() {
+            const startStr = document.getElementById('date-start').value;
+            const endStr = document.getElementById('date-end').value;
+            const lineFilter = document.getElementById('filter-line').value;
+
+            if(!startStr || !endStr) return;
+            
+            // Validar que inicio no sea mayor a fin
+            if (startStr > endStr) {
+                document.getElementById('date-start').value = endStr;
+                return processDataAndRender();
+            }
+
+            document.getElementById('lbl-trend-range').textContent = `${startStr.substring(5)} al ${endStr.substring(5)}`;
+
+            // 1. Filtrar Rango de Fechas
+            const filteredByDate = allRecords.filter(r => r.dateString >= startStr && r.dateString <= endStr);
+            
+            // 2. Filtrar por Línea seleccionada
+            const activeRecords = lineFilter === 'ALL' ? filteredByDate : filteredByDate.filter(r => (r.pieceType || 'UPR') === lineFilter);
+            
+            // Variables Analíticas
+            let stats = { totalRechazos: 0, totalRegistros: activeRecords.length, upr: 0, uprPz: 0, uprCx: 0, cowl: 0, cowlCont: 0, cowlOtr: 0, pocket: 0, cover: 0, tarimas: 0 };
+            let defectCounts = {};
+
+            activeRecords.forEach(r => {
+                let qty = r.quantity;
+                let pt = r.pieceType || 'UPR';
+                let isDefect = r.damage !== 'Tarimas OK';
+
+                if (isDefect) {
+                    stats.totalRechazos += qty;
+                    
+                    // Lógica para diferenciar defectos: 
+                    // Si están TODAS las líneas, agregar el nombre de la línea al defecto. Si está filtrado, basta con el defecto.
+                    let key = lineFilter === 'ALL' ? `${r.damage} [${pt}]` : r.damage;
+                    
+                    if (!defectCounts[key]) defectCounts[key] = { name: key, qty: 0, line: pt };
+                    defectCounts[key].qty += qty;
+                }
+
+                if (pt === 'UPR' && isDefect) {
+                    stats.upr += qty;
+                    if(r.type === 'Pieza') stats.uprPz += qty; else stats.uprCx += qty;
+                } else if (pt === 'COWL' && isDefect) {
+                    stats.cowl += qty;
+                    if(r.damage === 'Contaminación') stats.cowlCont += qty; else stats.cowlOtr += qty;
+                } else if (pt === 'POCKET' && isDefect) {
+                    stats.pocket += qty;
+                } else if (pt === 'COVER') {
+                    if (isDefect) stats.cover += qty;
+                    stats.tarimas += (r.pallets || 0);
+                }
+            });
+
+            // UI: Actualizar KPIs Generales
+            document.getElementById('kpi-total').textContent = stats.totalRechazos;
+            document.getElementById('kpi-registros').textContent = stats.totalRegistros;
+            
+            // UI: Control de opacidad/visibilidad según filtro para Robustez
+            const opactiyLogic = (targetLine) => (lineFilter === 'ALL' || lineFilter === targetLine) ? '1' : '0.2';
+            
+            document.getElementById('kpi-panel-upr').style.opacity = opactiyLogic('UPR');
+            document.getElementById('kpi-upr').textContent = stats.upr;
+            document.getElementById('kpi-upr-pz').textContent = stats.uprPz;
+            document.getElementById('kpi-upr-cx').textContent = stats.uprCx;
+
+            document.getElementById('kpi-panel-cowl').style.opacity = opactiyLogic('COWL');
+            document.getElementById('kpi-cowl').textContent = stats.cowl;
+            document.getElementById('kpi-cowl-cont').textContent = stats.cowlCont;
+            document.getElementById('kpi-cowl-otr').textContent = stats.cowlOtr;
+
+            document.getElementById('kpi-panel-pc').style.opacity = (lineFilter === 'ALL' || lineFilter === 'POCKET' || lineFilter === 'COVER') ? '1' : '0.2';
+            document.getElementById('kpi-sub-pocket').style.opacity = opactiyLogic('POCKET');
+            document.getElementById('kpi-sub-cover').style.opacity = opactiyLogic('COVER');
+            document.getElementById('kpi-sub-tarimas').style.opacity = opactiyLogic('COVER');
+            
+            document.getElementById('kpi-pocket').textContent = stats.pocket;
+            document.getElementById('kpi-cover').textContent = stats.cover;
+            document.getElementById('kpi-tarimas').textContent = stats.tarimas;
+
+            // UI: TOP DEFECTOS DIFERENCIADO POR COLORES
+            const topContainer = document.getElementById('top-defects-container');
+            let sortedDefects = Object.values(defectCounts).sort((a, b) => b.qty - a.qty).slice(0, 6); // Top 6
+            
+            if (sortedDefects.length === 0) {
+                topContainer.innerHTML = '<div class="text-center text-gray-600 font-bold text-xs mt-10 uppercase tracking-widest flex flex-col items-center"><i class="fas fa-check-circle text-3xl mb-2 text-gray-700"></i> Cero Defectos</div>';
+            } else {
+                let maxQty = sortedDefects[0].qty;
+                const lineColors = { 'UPR': '#3b82f6', 'COWL': '#6366f1', 'POCKET': '#14b8a6', 'COVER': '#10b981' };
+                
+                topContainer.innerHTML = sortedDefects.map((def) => {
+                    let pct = (def.qty / maxQty) * 100;
+                    let barColor = lineColors[def.line] || '#3498db';
+                    return `
+                    <div class="flex items-center text-[10px] md:text-xs">
+                        <div class="w-[130px] md:w-[150px] truncate text-gray-300 font-bold uppercase pr-3" title="${def.name}">${def.name}</div>
+                        <div class="flex-1 bg-[#12141a] h-5 rounded overflow-hidden border border-gray-800 relative">
+                            <div class="h-full rounded shadow-inner" style="width: ${pct}%; background-color: ${barColor}"></div>
+                        </div>
+                        <div class="w-[35px] text-right font-condensed font-bold text-white text-sm">${def.qty}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            // UI: DONA DE DISTRIBUCIÓN
+            if (chartDonut) {
+                if (lineFilter === 'ALL') {
+                    // Modo Normal: Distribución Global por Líneas
+                    document.getElementById('lbl-donut-type').textContent = 'POR LÍNEA';
+                    document.getElementById('lbl-donut-type').className = 'text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded text-[8px] font-bold border border-blue-800/50';
+                    
+                    chartDonut.updateOptions({
+                        labels: ['UPR', 'COWL', 'POCKET', 'COVER'],
+                        colors: ['#3b82f6', '#6366f1', '#14b8a6', '#10b981']
+                    });
+                    chartDonut.updateSeries([stats.upr, stats.cowl, stats.pocket, stats.cover]);
+                } else {
+                    // Modo Inteligente: Distribución por Tipos de Daño (Auto)
+                    document.getElementById('lbl-donut-type').textContent = 'POR DAÑO (AUTO)';
+                    document.getElementById('lbl-donut-type').className = 'text-orange-400 bg-orange-900/30 px-2 py-0.5 rounded text-[8px] font-bold border border-orange-800/50 shadow-sm';
+                    
+                    // Ordenamos los defectos de esta línea
+                    let defArray = Object.values(defectCounts).sort((a, b) => b.qty - a.qty);
+                    let donutLabels = [];
+                    let donutSeries = [];
+                    
+                    // Paleta de advertencia para defectos (Rojos, naranjas, amarillos)
+                    const dangerColors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#06b6d4'];
+                    
+                    // Mostramos el Top 5 y agrupamos el resto en "OTROS" para no saturar la gráfica
+                    let top5 = defArray.slice(0, 5);
+                    let others = defArray.slice(5);
+                    
+                    top5.forEach(d => {
+                        let cleanName = d.name.split(' [')[0]; // Quitamos el sufijo de la línea porque ya estamos filtrados
+                        donutLabels.push(cleanName); 
+                        donutSeries.push(d.qty); 
+                    });
+                    
+                    if (others.length > 0) {
+                        donutLabels.push('OTROS');
+                        donutSeries.push(others.reduce((sum, d) => sum + d.qty, 0));
+                    }
+                    
+                    if (donutSeries.length === 0) {
+                        donutLabels = ['SIN DATOS']; donutSeries = [0];
+                    }
+                    
+                    chartDonut.updateOptions({
+                        labels: donutLabels,
+                        colors: dangerColors
+                    });
+                    chartDonut.updateSeries(donutSeries);
+                }
+            }
+
+            // UI: TENDENCIA APILADA (Rango exacto seleccionado)
+            const trendLabels = [];
+            const uprData = []; const cowlData = []; const pocketData = []; const coverData = [];
+            
+            let currDate = new Date(startStr + 'T12:00:00'); 
+            let endDateObj = new Date(endStr + 'T12:00:00');
+            
+            // Límite de seguridad: máximo 60 días en la gráfica para evitar bloqueos
+            let daysDiff = Math.ceil((endDateObj - currDate) / (1000 * 60 * 60 * 24));
+            if (daysDiff > 60) {
+                currDate = new Date(endDateObj);
+                currDate.setDate(currDate.getDate() - 60);
+            }
+
+            while (currDate <= endDateObj) {
+                const dStr = `${currDate.getFullYear()}-${String(currDate.getMonth() + 1).padStart(2, '0')}-${String(currDate.getDate()).padStart(2, '0')}`;
+                trendLabels.push(dStr.substring(5)); // DD-MM
+                
+                // Buscar registros para ese día exacto, respetando el filtro de línea activo
+                const dayRecords = allRecords.filter(r => r.dateString === dStr && r.damage !== 'Tarimas OK' && (lineFilter === 'ALL' || (r.pieceType || 'UPR') === lineFilter));
+                
+                let u=0, c=0, p=0, v=0;
+                dayRecords.forEach(r => {
+                    let q = r.quantity || 1;
+                    let pt = r.pieceType || 'UPR';
+                    if(pt === 'UPR') u += q; else if(pt === 'COWL') c += q; else if(pt === 'POCKET') p += q; else if(pt === 'COVER') v += q;
+                });
+                
+                uprData.push(u); cowlData.push(c); pocketData.push(p); coverData.push(v);
+                currDate.setDate(currDate.getDate() + 1);
+            }
+            
+            if (chartTrend) {
+                chartTrend.updateSeries([
+                    { name: 'UPR', data: uprData },
+                    { name: 'COWL', data: cowlData },
+                    { name: 'POCKET', data: pocketData },
+                    { name: 'COVER', data: coverData }
+                ]);
+                chartTrend.updateOptions({ xaxis: { categories: trendLabels } });
+            }
+
+            // UI: TABLA DE DATOS DETALLADA
+            renderTable(activeRecords);
+        };
+
+        function renderTable(records) {
+            const tbody = document.getElementById('table-body');
+            const emptyState = document.getElementById('table-empty-state');
+            document.getElementById('table-record-count').textContent = `${records.length} EVENTOS`;
+
+            if (records.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            
+            // Ordenar por fecha y hora más reciente
+            const sortedRecords = [...records].sort((a, b) => b.timestamp - a.timestamp);
+
+            tbody.innerHTML = sortedRecords.map(r => {
+                const dObj = new Date(r.timestamp);
+                const timeStr = `${dObj.toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit'})} <span class="text-gray-600 mx-1">|</span> ${dObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                const isPalletsOK = r.damage === 'Tarimas OK';
+                const pt = r.pieceType || 'UPR';
+                
+                // Badges dinámicos para Pieza
+                let badgeColor = 'bg-blue-900/30 text-blue-400 border-blue-800/50';
+                if(pt === 'COWL') badgeColor = 'bg-indigo-900/30 text-indigo-400 border-indigo-800/50';
+                if(pt === 'POCKET') badgeColor = 'bg-teal-900/30 text-teal-400 border-teal-800/50';
+                if(pt === 'COVER') badgeColor = 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50';
+
+                // Badges dinámicos para Daño
+                let damageBadge = isPalletsOK 
+                    ? `<span class="bg-green-900/30 text-green-400 border border-green-800/50 px-2.5 py-1 rounded text-[10px] font-bold shadow-sm whitespace-nowrap"><i class="fas fa-check-double mr-1"></i>${r.damage}</span>`
+                    : `<span class="bg-red-900/20 text-red-400 border border-red-900/50 px-2.5 py-1 rounded text-[10px] font-bold shadow-sm whitespace-nowrap">${r.damage}</span>`;
+
+                let qtyStr = isPalletsOK ? `<span class="text-emerald-500 font-bold">${r.pallets} (TR)</span>` : r.quantity;
+                let variantSide = (r.side && r.side !== 'N/A') ? r.side : '';
+                if(r.variant && r.variant !== 'N/A') variantSide += (variantSide ? ' / ' : '') + r.variant;
+                if(!variantSide) variantSide = '-';
+
+                return `
+                    <tr>
+                        <td class="font-condensed text-gray-400 text-[11px]">${timeStr}</td>
+                        <td class="font-bold">
+                            <span class="${badgeColor} border px-2 py-0.5 rounded text-[9px] tracking-widest uppercase shadow-sm">${pt}</span>
+                        </td>
+                        <td class="text-gray-400 uppercase text-[9px] tracking-wider font-bold">${r.type || 'PIEZA'}</td>
+                        <td class="text-gray-300 text-xs font-bold">${variantSide}</td>
+                        <td>${damageBadge}</td>
+                        <td class="text-center font-condensed text-white text-sm font-bold bg-[#1a1c23]/50 border-x border-[#2d313a]">${qtyStr}</td>
+                        <td class="text-gray-500 text-[10px] uppercase font-bold truncate max-w-[120px]"><i class="fas fa-user-tag text-gray-700 mr-1"></i> ${r.inspectorName || 'ANÓNIMO'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.downloadCSV = function() {
+            const startStr = document.getElementById('date-start').value;
+            const endStr = document.getElementById('date-end').value;
+            const lineFilter = document.getElementById('filter-line').value;
+
+            let filteredToExport = allRecords.filter(r => r.dateString >= startStr && r.dateString <= endStr);
+            if (lineFilter !== 'ALL') {
+                filteredToExport = filteredToExport.filter(r => (r.pieceType || 'UPR') === lineFilter);
+            }
+
+            if (filteredToExport.length === 0) {
+                alert("No hay datos en el rango seleccionado para exportar.");
+                return;
+            }
+
+            const sortedRecords = [...filteredToExport].sort((a, b) => b.timestamp - a.timestamp);
+            const headers = ['FECHA', 'HORA', 'LINEA', 'DEFECTO', 'PRESENTACION', 'LADO', 'VARIANTE', 'CANTIDAD_DEFECTOS', 'TARIMAS_REVISADAS', 'INSPECTOR'];
+            
+            const rows = sortedRecords.map(r => {
+                const dateObj = new Date(r.timestamp);
+                
+                return [
+                    dateObj.toLocaleDateString('es-MX'),
+                    dateObj.toLocaleTimeString('es-MX'),
+                    r.pieceType || 'UPR',
+                    r.damage,
+                    r.type || 'Pieza',
+                    r.side || 'N/A',
+                    r.variant || 'N/A',
+                    r.damage === 'Tarimas OK' ? 0 : r.quantity,
+                    r.pallets || 0,
+                    r.inspectorName || 'Anónimo'
+                ].map(v => `"${v}"`).join(',');
+            });
+
+            const csvContent = headers.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' }); 
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Data_Analitica_Delta_${startStr}_al_${endStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.toggleFullscreen = function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error al intentar entrar a pantalla completa: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        };
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('btn-fullscreen');
+            if (!document.fullscreenElement) {
+                btn.innerHTML = '<i class="fas fa-expand text-gray-400"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-compress text-blue-400"></i>';
+            }
+        });
+
+        setTimeout(() => {
+            initCharts();
+            initDashboard();
+        }, 100);
+
+    </script>
+</body>
+</html>
