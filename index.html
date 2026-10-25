@@ -285,7 +285,7 @@
                     <span class="text-gray-500 text-[9px] font-bold" id="lbl-trend-range">...</span>
                 </div>
                 
-                <!-- Layout de División Perfecta -->
+                <!-- Layout de División Perfecta con Absolute Positioning para Gráficas -->
                 <div class="flex flex-1 flex-col md:flex-row relative bg-[#12141a]">
                     
                     <!-- LADO IZQUIERDO: LEYENDA Y DONA ESTÁTICA -->
@@ -300,8 +300,11 @@
                         </div>
 
                         <!-- CONTENEDOR DE LA DONA ESTÁTICA -->
-                        <div class="flex-1 relative flex items-center justify-center p-2 min-h-[220px]">
-                            <div id="chart-donut-container" class="w-full h-full relative z-0"></div>
+                        <div class="flex-1 relative min-h-[220px]">
+                            <!-- Wrapper Absoluto para Evitar Crecimiento de Contenedor -->
+                            <div class="absolute inset-0 p-2 flex items-center justify-center">
+                                <div id="chart-donut-container" class="w-full h-full relative z-0"></div>
+                            </div>
                             
                             <!-- CENTRO INTELIGENTE (PERFECTAMENTE CENTRADO ABSOLUTO) -->
                             <div id="donut-center" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[130px] h-[130px] rounded-full bg-[#1a1c23] border-2 border-gray-600 z-10 flex flex-col items-center justify-center pointer-events-none shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] transition-all duration-300">
@@ -311,8 +314,11 @@
                     </div>
 
                     <!-- LADO DERECHO: GRÁFICA DE BARRAS / TENDENCIAS -->
-                    <div class="flex-1 relative w-full h-[250px] md:h-full p-2 bg-[#12141a]" id="chart-trend-container">
-                        <!-- ApexChart Tendencia -->
+                    <div class="flex-1 relative w-full min-h-[250px] bg-[#12141a]">
+                        <!-- Wrapper Absoluto para Evitar Crecimiento de Contenedor -->
+                        <div class="absolute inset-0 p-2">
+                            <div id="chart-trend-container" class="w-full h-full"></div>
+                        </div>
                     </div>
                 </div>
             </div>
