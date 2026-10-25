@@ -135,6 +135,19 @@
         .apexcharts-pie-series path {
             transition: fill 0.3s ease;
         }
+
+        /* MODO EXPANDIDO DE TABLA */
+        .table-fullscreen {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 100 !important;
+            border-radius: 0 !important;
+            background-color: var(--bg-base) !important;
+            margin: 0 !important;
+            padding: 12px !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
     </style>
 </head>
 <body class="lg:h-screen lg:overflow-hidden">
@@ -275,7 +288,7 @@
                 <!-- Layout de División Perfecta -->
                 <div class="flex flex-1 flex-col md:flex-row relative bg-[#12141a]">
                     
-                    <!-- LADO IZQUIERDO: LEYENDA Y DONA -->
+                    <!-- LADO IZQUIERDO: LEYENDA Y DONA ESTÁTICA -->
                     <div class="w-full md:w-[270px] flex-shrink-0 flex flex-col relative border-b md:border-b-0 md:border-r border-gray-800 bg-[#15171e]">
                         
                         <!-- LEYENDA SUPERIOR IZQUIERDA RESTAURADA -->
@@ -306,7 +319,7 @@
         </div>
 
         <!-- FILA 3: TABLA DE DATOS DETALLADA -->
-        <div class="panel flex-1 flex flex-col min-h-[350px] lg:min-h-0">
+        <div class="panel flex-1 flex flex-col min-h-[350px] lg:min-h-0 relative" id="table-card-wrapper">
             <div class="section-title text-gray-300 flex-shrink-0 bg-[#15171e] z-20">
                 <div class="flex items-center gap-3">
                     <span>BITÁCORA DE REGISTROS</span>
@@ -314,9 +327,14 @@
                         <i class="fas fa-times"></i> Quitar Filtro: <span id="lbl-active-filter"></span>
                     </button>
                 </div>
-                <span id="table-record-count" class="text-gray-400 bg-[#12141a] px-3 py-1 rounded text-[10px] border border-gray-700">0 EVENTOS</span>
+                <div class="flex items-center gap-2">
+                    <span id="table-record-count" class="text-gray-400 bg-[#12141a] px-3 py-1 rounded text-[10px] border border-gray-700">0 EVENTOS</span>
+                    <button onclick="toggleTableFullscreen()" id="btn-table-expand" class="bg-[#2d313a] hover:bg-[#3f4452] text-gray-300 hover:text-white px-2.5 py-1 rounded text-[10px] font-bold transition flex items-center gap-1 border border-gray-600" title="Expandir Bitácora">
+                        <i class="fas fa-expand-alt" id="expand-icon"></i> <span id="expand-text">Expandir</span>
+                    </button>
+                </div>
             </div>
-            <div class="flex-1 overflow-auto p-1 relative">
+            <div class="flex-1 overflow-auto p-1 relative" id="table-scroll-area">
                 <table class="w-full text-left">
                     <thead>
                         <tr>
@@ -361,10 +379,9 @@
         let allRecords = [];
         let chartDonut, chartTrend;
         
-        // Estado Global del Filtro
         let activePieceContext = null; 
+        let isTableExpanded = false;
         
-        // Colores Base Institucionales
         const baseLineColors = ['#3b82f6', '#6366f1', '#14b8a6', '#10b981']; // UPR, COWL, POCKET, COVER
         
         const getLocalDateString = (offsetDays = 0) => {
@@ -435,7 +452,7 @@
                 window.clearInteractiveSelection();
             } else {
                 activePieceContext = val;
-                document.getElementById('lbl-active-filter').textContent = `Filtro: ${val}`;
+                document.getElementById('lbl-active-filter').textContent = `${val}`;
                 document.getElementById('btn-clear-filter').classList.remove('hidden');
                 processDataAndRender();
             }
@@ -447,10 +464,7 @@
             document.getElementById('filter-line').value = 'ALL'; 
             
             if(chartDonut) {
-                // Restaura colores de la dona
                 chartDonut.updateOptions({ colors: baseLineColors });
-                
-                // Forzamos la remoción del estado seleccionado del SVG de ApexCharts para matar el resplandor fantasma
                 setTimeout(() => {
                     const paths = document.querySelectorAll('.apexcharts-pie-series path');
                     paths.forEach(p => {
@@ -466,12 +480,10 @@
             const commonOptions = {
                 chart: { background: 'transparent', toolbar: { show: false }, animations: { enabled: true, speed: 400 } },
                 theme: { mode: 'dark' },
-                // Padding izquierdo 0 = Centrado matemático perfecto
                 grid: { borderColor: '#2d313a', strokeDashArray: 3, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
                 tooltip: { theme: 'dark' }
             };
 
-            // DONA ESTÁTICA INTERACTIVA
             const optionsDonut = {
                 ...commonOptions,
                 series: [0, 0, 0, 0],
@@ -482,16 +494,12 @@
                     height: '100%', 
                     width: '100%',
                     events: {
-                        // El evento de "Click en datos" (las rebanadas) maneja la lógica inteligente sin afectar el scroll móvil
                         dataPointSelection: function(event, chartContext, config) {
                             const label = config.w.globals.labels[config.dataPointIndex];
                             
-                            // Si se toca la misma pieza que ya está activa, se quita el filtro (Toggle)
                             if (activePieceContext === label) {
                                 window.clearInteractiveSelection();
-                            } 
-                            // Si se toca una pieza diferente, se cambia el filtro
-                            else {
+                            } else {
                                 activePieceContext = label;
                                 document.getElementById('filter-line').value = label;
                                 document.getElementById('lbl-active-filter').textContent = `${label}`;
@@ -503,7 +511,7 @@
                 },
                 plotOptions: {
                     pie: { 
-                        expandOnClick: false, // Evita que la rebanada brinque hacia afuera, manteniendo el círculo perfecto
+                        expandOnClick: false,
                         donut: { size: '75%', labels: { show: false } } 
                     }
                 },
@@ -520,7 +528,6 @@
             chartDonut = new ApexCharts(document.querySelector("#chart-donut-container"), optionsDonut);
             chartDonut.render();
 
-            // TENDENCIA MIXTA (Barras apiladas o Columna + Líneas)
             const optionsTrend = {
                 ...commonOptions,
                 series: [],
@@ -536,7 +543,6 @@
                 yaxis: { show: true, labels: { style: { colors: '#64748b', fontSize: '10px', fontWeight: 700 } } },
                 legend: { show: false }, 
             };
-            // Restauramos padding izquierdo para la gráfica de barras para que se vean los números
             optionsTrend.grid.padding.left = 10;
             chartTrend = new ApexCharts(document.querySelector("#chart-trend-container"), optionsTrend);
             chartTrend.render();
@@ -551,22 +557,18 @@
 
             document.getElementById('lbl-trend-range').textContent = `${startStr.substring(5)} al ${endStr.substring(5)}`;
 
-            // 1. Filtrado Base por Fecha
             let baseRecords = allRecords.filter(r => r.dateString >= startStr && r.dateString <= endStr);
             
-            // 2. Registros Activos (con filtro de pieza si aplica)
             let activeTableRecords = baseRecords;
             if(activePieceContext) {
                 activeTableRecords = activeTableRecords.filter(r => (r.pieceType || 'UPR') === activePieceContext);
             }
 
-            // Cálculos KPIs Generales
             let stats = { totalRechazos: 0, upr: 0, cowl: 0, pocket: 0, cover: 0 };
             let defectCounts = {};
             const lineColorsMap = { 'UPR': '#3b82f6', 'COWL': '#6366f1', 'POCKET': '#14b8a6', 'COVER': '#10b981' };
-            const legendColorsForLines = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#d946ef']; // Paleta brillante para líneas
+            const legendColorsForLines = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#d946ef'];
 
-            // Iterar todos los registros de fecha para la Dona y KPIs Superiores
             baseRecords.forEach(r => {
                 let qty = r.quantity || 1; 
                 let pt = r.pieceType || 'UPR';
@@ -575,12 +577,10 @@
                 if (isDefect) {
                     if(pt === 'UPR') stats.upr += qty; else if(pt === 'COWL') stats.cowl += qty; else if(pt === 'POCKET') stats.pocket += qty; else if(pt === 'COVER') stats.cover += qty;
                     
-                    // Si estamos analizando una pieza específica, contar sus daños
                     if (activePieceContext && pt === activePieceContext) {
                         if (!defectCounts[r.damage]) defectCounts[r.damage] = { name: r.damage, qty: 0 };
                         defectCounts[r.damage].qty += qty;
                     } 
-                    // Si es global, contar daños globales
                     else if (!activePieceContext) {
                         let key = `${r.damage} [${pt}]`;
                         if (!defectCounts[key]) defectCounts[key] = { name: key, qty: 0, line: pt };
@@ -589,7 +589,6 @@
                 }
             });
 
-            // UI KPIs
             stats.totalRechazos = activePieceContext ? stats[activePieceContext.toLowerCase()] : (stats.upr + stats.cowl + stats.pocket + stats.cover);
             
             document.getElementById('kpi-total').textContent = stats.totalRechazos;
@@ -601,36 +600,30 @@
             document.getElementById('kpi-panel-pc').style.opacity = (!activePieceContext || activePieceContext === 'POCKET' || activePieceContext === 'COVER') ? '1' : '0.2';
             document.getElementById('kpi-pocket').textContent = stats.pocket; document.getElementById('kpi-cover').textContent = stats.cover;
 
-            // --- ACTUALIZACIÓN DE DONA Y RESPLANDOR ---
             if (chartDonut) {
                 chartDonut.updateSeries([stats.upr, stats.cowl, stats.pocket, stats.cover]);
                 
                 if (activePieceContext) {
-                    // Apaga los demás colores a gris y deja el seleccionado encendido
                     const idx = ['UPR', 'COWL', 'POCKET', 'COVER'].indexOf(activePieceContext);
                     const focusedColors = baseLineColors.map((color, index) => index === idx ? color : '#2d313a');
                     chartDonut.updateOptions({ colors: focusedColors });
                 } else {
-                    // Restaura estado original para asegurar que la limpieza se refleje visualmente
                     chartDonut.updateOptions({ colors: baseLineColors });
                 }
             }
 
-            // --- LÓGICA DEL CEREBRO (CENTRO DE DONA) Y GRÁFICA MIXTA ---
             const centerEl = document.getElementById('donut-center');
             let trendLinesData = []; 
 
             if (!activePieceContext) {
-                // MODO GLOBAL: Ícono interactivo en el centro, sin resplandor
                 centerEl.style.boxShadow = 'inset 0 0 15px rgba(0,0,0,0.8)';
-                centerEl.style.borderColor = '#4b5563'; // Gray-600
+                centerEl.style.borderColor = '#4b5563';
                 
                 centerEl.innerHTML = `
                     <i class="fas fa-hand-pointer text-blue-400 text-3xl md:text-4xl mb-1.5 pulse-icon drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]"></i>
                     <span class="text-[9px] md:text-[10px] font-bold text-gray-300 uppercase tracking-widest leading-tight text-center px-1">Click para<br>Analizar</span>
                 `;
 
-                // Gráfica de Tendencia: Barras Apiladas
                 if (chartTrend) {
                     let trendLabels = [];
                     let currDate = new Date(startStr + 'T12:00:00'); let endDateObj = new Date(endStr + 'T12:00:00');
@@ -657,14 +650,12 @@
                 }
 
             } else {
-                // MODO ESPECÍFICO: Centro = Leyenda de Daños + Resplandor!
                 const activeColor = lineColorsMap[activePieceContext];
-                // Efecto espectacular de resplandor en el centro
                 centerEl.style.boxShadow = `0 0 25px ${activeColor}80, inset 0 0 15px rgba(0,0,0,0.9)`;
                 centerEl.style.borderColor = activeColor;
 
                 let defArray = Object.values(defectCounts).sort((a, b) => b.qty - a.qty);
-                let topDamages = defArray.slice(0, 4); // Top 4 para que quepa perfecto
+                let topDamages = defArray.slice(0, 4);
                 
                 let pieceColorConfig = { 'UPR': 'text-blue-400 bg-blue-900/50', 'COWL': 'text-indigo-400 bg-indigo-900/50', 'POCKET': 'text-teal-400 bg-teal-900/50', 'COVER': 'text-emerald-400 bg-emerald-900/50' };
                 let pClass = pieceColorConfig[activePieceContext] || 'text-white';
@@ -689,13 +680,11 @@
                 centerHtml += `</div>`;
                 centerEl.innerHTML = centerHtml;
 
-                // Gráfica de Tendencia: Barra Base Atrapada + Líneas de Daño FINAS
                 if (chartTrend) {
                     let trendLabels = [];
                     let currDate = new Date(startStr + 'T12:00:00'); let endDateObj = new Date(endStr + 'T12:00:00');
                     if (Math.ceil((endDateObj - currDate) / (1000 * 60 * 60 * 24)) > 60) { currDate = new Date(endDateObj); currDate.setDate(currDate.getDate() - 60); }
 
-                    // Barra base para mostrar volumen total atenuada
                     let barSeries = { name: `Volumen ${activePieceContext}`, type: 'column', data: [], color: activeColor };
                     let lineSeries = trendLinesData.map(tData => ({ name: tData.name, type: 'line', data: [], color: tData.color }));
 
@@ -703,7 +692,6 @@
                         const dStr = `${currDate.getFullYear()}-${String(currDate.getMonth() + 1).padStart(2, '0')}-${String(currDate.getDate()).padStart(2, '0')}`;
                         trendLabels.push(dStr.substring(5));
                         
-                        // Registros de ESTA pieza en este día
                         const dayRecords = baseRecords.filter(r => r.dateString === dStr && r.damage !== 'Tarimas OK' && (r.pieceType || 'UPR') === activePieceContext);
                         
                         let totalPieceQty = 0;
@@ -722,22 +710,19 @@
                     }
                     
                     let finalSeries = [barSeries, ...lineSeries];
-                    let strokeWidths = [0]; // Barra = 0 borde
-                    
-                    // LÍNEAS MÁS FINAS: Grosor 1.5 en lugar del grosor anterior por defecto
+                    let strokeWidths = [0]; 
                     lineSeries.forEach(() => strokeWidths.push(1.5)); 
                     
                     chartTrend.updateOptions({ 
                         chart: { stacked: false }, 
                         xaxis: { categories: trendLabels }, 
                         stroke: { width: strokeWidths, curve: 'smooth' },
-                        fill: { opacity: [0.15, 1, 1, 1, 1, 1] } // La barra se oscurece al 15%, las líneas brillan al 100%
+                        fill: { opacity: [0.15, 1, 1, 1, 1, 1] }
                     });
                     chartTrend.updateSeries(finalSeries);
                 }
             }
 
-            // --- UI TOP DEFECTOS CLÁSICO (Panel Izquierdo) ---
             const topContainer = document.getElementById('top-defects-container');
             let defArrayUI = Object.values(defectCounts).sort((a, b) => b.qty - a.qty);
             let sortedDefectsUI = defArrayUI.slice(0, 6); 
@@ -760,8 +745,26 @@
                 }).join('');
             }
 
-            // Actualizar Tabla
             renderTable(activeTableRecords);
+        };
+
+        window.toggleTableFullscreen = function() {
+            isTableExpanded = !isTableExpanded;
+            const wrapper = document.getElementById('table-card-wrapper');
+            const icon = document.getElementById('expand-icon');
+            const text = document.getElementById('expand-text');
+            const scrollArea = document.getElementById('table-scroll-area');
+
+            if (isTableExpanded) {
+                wrapper.classList.add('table-fullscreen');
+                icon.className = 'fas fa-compress-alt';
+                text.textContent = 'Minimizar';
+                scrollArea.style.maxHeight = 'none';
+            } else {
+                wrapper.classList.remove('table-fullscreen');
+                icon.className = 'fas fa-expand-alt';
+                text.textContent = 'Expandir';
+            }
         };
 
         function renderTable(records) {
