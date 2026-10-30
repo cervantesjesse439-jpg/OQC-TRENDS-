@@ -38,6 +38,7 @@ export function renderTable(records) {
             let qtyStr = isPalletsOK ? `<span class="text-emerald-500 font-bold">${r.pallets} (TR)</span>` : r.quantity;
             let variantSide = (r.side && r.side !== 'N/A') ? r.side : '';
             if (r.variant && r.variant !== 'N/A') variantSide += (variantSide ? ' / ' : '') + r.variant;
+            if (r.cartDefectPieces > 0) variantSide += (variantSide ? ' <span class="text-blue-400">(~' + r.cartDefectPieces + '/50 pzs)</span>' : '~' + r.cartDefectPieces + '/50 pzs');
 
             return `<tr>
                 <td class="font-condensed text-gray-400 text-[11px]">${timeStr}</td>
